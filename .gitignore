@@ -1,0 +1,11 @@
+bigint
+*.o
+*.obj
+*.exe
+*.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
