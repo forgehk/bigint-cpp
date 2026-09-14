@@ -2,7 +2,7 @@
 
 > Arbitrary-precision integer class in modern C++ — addition, subtraction, multiplication, division, factorial, Fibonacci, and the Collatz conjecture, all with operator overloading.
 
-[![C++](https://img.shields.io/badge/C++-17-blue.svg)]() [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/forgehk/bigint-cpp/actions/workflows/ci.yml/badge.svg)](https://github.com/forgehk/bigint-cpp/actions/workflows/ci.yml) [![C++](https://img.shields.io/badge/C++-17-blue.svg)]() [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
@@ -63,6 +63,24 @@ No external dependencies. Pure standard library.
 
 ---
 
+## Tests
+
+```bash
+g++ -std=c++17 -O2 tests.cpp -o tests
+./tests
+```
+
+75 assertions covering construction (including leading whitespace and zeros),
+the arithmetic operators and their carry/borrow edges, comparison, prefix and
+postfix `++`, digit indexing, the 12-digit scientific-notation crossover,
+`fibo()`, `fact()`, and `collatz()` step counts. `./tests` exits non-zero if
+any check fails.
+
+CI builds both the demo and the tests under `-std=c++17` and `-std=c++20`
+with `-Wall -Wextra`, then runs them.
+
+---
+
 ## Implementation notes
 
 - **Digit storage:** `std::vector<char>` with **least-significant digit at index 0**. Makes carry propagation a one-direction loop.
@@ -70,6 +88,7 @@ No external dependencies. Pure standard library.
 - **Tail recursion:** `fiboHelper(n, a, b)` and `factHelper(n, acc)` are written so the recursive call is in tail position. (Modern C++ compilers don't guarantee TCO, but the shape is correct for any compiler that does, and depth is `O(n)` either way.)
 - **Scientific output:** Crosses over at >12 digits, prints 7 significant digits (`d.dddddde<exp>`).
 - **Collatz:** Uses `divByInt(2, remainder)` instead of full BigInt division when the number is even — much cheaper. `3n+1` reuses regular multiplication and addition.
+- **Test harness:** `bigint.cpp` is a single translation unit with its own demo `main()`, so `tests.cpp` defines `BIGINT_NO_MAIN` and includes it directly. The documented build command above stays unchanged.
 
 ---
 
@@ -77,8 +96,7 @@ No external dependencies. Pure standard library.
 
 - Negative numbers (sign field) — currently positive-only per assignment spec.
 - Karatsuba or FFT multiplication for very large operands (`O(n^1.58)` or `O(n log n)` vs the current `O(n²)`).
-- A proper unit test suite (currently driven by `main()`'s test harness).
-- Header/implementation split for use as a real library.
+- Header/implementation split for use as a real library, so `tests.cpp` can link against it instead of including the translation unit.
 
 ---
 
