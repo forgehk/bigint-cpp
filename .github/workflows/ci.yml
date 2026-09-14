@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: g++ ${{ matrix.std }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        std: ["c++17", "c++20"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compiler version
+        run: g++ --version
+
+      - name: Build demo
+        run: g++ -std=${{ matrix.std }} -O2 -Wall -Wextra -o bigint bigint.cpp
+
+      - name: Build tests
+        run: g++ -std=${{ matrix.std }} -O2 -Wall -Wextra -o tests tests.cpp
+
+      - name: Run tests
+        run: ./tests
+
+      - name: Run demo
+        run: ./bigint
