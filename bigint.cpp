@@ -181,8 +181,7 @@ public:
         v.clear();
         // remove leading spaces and zeros
         int i = 0;
-        while (i < (int)s.size() && (s[i] == ' ' || s[i] == '	' || s[i] == '
-')) {
+        while (i < (int)s.size() && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n')) {
             ++i;
         }
         while (i < (int)s.size() && s[i] == '0') {
@@ -206,6 +205,14 @@ public:
 
     BigInt(const BigInt &other) {
         v = other.v;
+    }
+
+    // Declared explicitly: a user-provided copy constructor suppresses the
+    // implicit copy assignment under the rule of three, and operator++ and
+    // collatz() both assign to an existing BigInt.
+    BigInt &operator=(const BigInt &other) {
+        v = other.v;
+        return *this;
     }
 
     BigInt operator+(BigInt other) const {
@@ -381,12 +388,14 @@ ostream &operator<<(ostream &os, const BigInt &b) {
     return os;
 }
 
+// Guarded so tests.cpp can include this translation unit and exercise BigInt
+// directly without pulling in the demo harness.
+#ifndef BIGINT_NO_MAIN
+
 int main()
 {
     int space = 10;
-    cout << "
-TestUnit:
-" << std::flush;
+    cout << "\a\nTestUnit:\n" << std::flush;
     cout << "User Name:" << std::flush;
     std::system("whoami");
     std::system("date");
@@ -443,3 +452,5 @@ TestUnit:
 
     return 0;
 }
+
+#endif // BIGINT_NO_MAIN
