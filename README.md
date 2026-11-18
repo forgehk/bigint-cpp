@@ -24,7 +24,7 @@ The point isn't to ship a Boost-quality library — it's to demonstrate competen
 | `operator+` | Digit-wise add with carry |
 | `operator-` | Digit-wise subtract with borrow (positive results only — assignment spec) |
 | `operator*` | School-method multiplication with carry propagation |
-| `operator/`, `operator%` | Division by a `BigInt` that fits in `int` (assignment-bounded) |
+| `operator/`, `operator%` | Schoolbook long division by any `BigInt`; dividing by zero throws `std::domain_error` |
 | Prefix & postfix `operator++` | Proper temp semantics |
 | `operator[]` | Returns the digit at index `i` as a `BigInt` |
 | `operator==`, `!=`, `<` | Magnitude comparison |
@@ -70,8 +70,9 @@ g++ -std=c++17 -O2 tests.cpp -o tests
 ./tests
 ```
 
-75 assertions covering construction (including leading whitespace and zeros),
-the arithmetic operators and their carry/borrow edges, comparison, prefix and
+91 assertions covering construction (including leading whitespace and zeros),
+the arithmetic operators and their carry/borrow edges, long division by
+multi-digit divisors (including ones past `INT_MAX`) and by zero, comparison, prefix and
 postfix `++`, digit indexing, the 12-digit scientific-notation crossover,
 `fibo()`, `fact()`, and `collatz()` step counts. `./tests` exits non-zero if
 any check fails.
@@ -87,6 +88,7 @@ with `-Wall -Wextra`, then runs them.
 - **Leading-zero trim:** Every mutating op calls `trim()` so equality and comparison stay correct.
 - **Tail recursion:** `fiboHelper(n, a, b)` and `factHelper(n, acc)` are written so the recursive call is in tail position. (Modern C++ compilers don't guarantee TCO, but the shape is correct for any compiler that does, and depth is `O(n)` either way.)
 - **Scientific output:** Crosses over at >12 digits, prints 7 significant digits (`d.dddddde<exp>`).
+- **Division:** `divMod()` brings the dividend down one digit at a time from the most significant end; the running remainder stays below `10 * divisor`, so each quotient digit takes at most nine subtractions. `O(n·m)` digit operations overall.
 - **Collatz:** Uses `divByInt(2, remainder)` instead of full BigInt division when the number is even — much cheaper. `3n+1` reuses regular multiplication and addition.
 - **Test harness:** `bigint.cpp` is a single translation unit with its own demo `main()`, so `tests.cpp` defines `BIGINT_NO_MAIN` and includes it directly. The documented build command above stays unchanged.
 
