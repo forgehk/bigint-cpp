@@ -6,6 +6,7 @@
 // unchanged while still giving the class a real test harness.
 
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #define BIGINT_NO_MAIN
@@ -36,6 +37,21 @@ static std::string str(const BigInt &b) {
 static void expectStr(const BigInt &b, const std::string &want,
                       const std::string &name) {
     std::string got = str(b);
+    check(got == want, name, got, want);
+}
+
+// Every digit via print(), for values past the scientific-notation crossover.
+static std::string full(const BigInt &b) {
+    std::ostringstream os;
+    std::streambuf *old = std::cout.rdbuf(os.rdbuf());
+    b.print();
+    std::cout.rdbuf(old);
+    return os.str();
+}
+
+static void expectFull(const BigInt &b, const std::string &want,
+                       const std::string &name) {
+    std::string got = full(b);
     check(got == want, name, got, want);
 }
 
@@ -113,6 +129,52 @@ static void testDivision() {
     expectStr(BigInt(100) % BigInt(10), "0", "exact division leaves no remainder");
     expectStr(BigInt(7) / BigInt(10), "0", "quotient smaller than divisor is 0");
     expectStr(BigInt(7) % BigInt(10), "7", "remainder when quotient is 0");
+}
+
+static void testLongDivision() {
+    BigInt a("123456789012345678901234567890");
+    BigInt b("9876543210987");
+    expectFull(a / b, "12499999886094578", "multi-digit divisor quotient");
+    expectFull(a % b, "1249943839404", "multi-digit divisor remainder");
+    expectTrue((a / b) * b + (a % b) == a, "q * d + r reconstructs the dividend");
+
+    // Divisors that do not fit in an int.
+    BigInt big("1000000000000000000000000000000");
+    expectFull(big / BigInt("4294967296"), "232830643653869628906",
+               "10^30 / 2^32 quotient");
+    expectFull(big % BigInt("4294967296"), "1073741824", "10^30 % 2^32 remainder");
+
+    // (2^127 - 1) / (2^61 - 1), both Mersenne primes.
+    BigInt m127("170141183460469231731687303715884105727");
+    BigInt m61("2305843009213693951");
+    expectFull(m127 / m61, "73786976294838206496", "M127 / M61 quotient");
+    expectFull(m127 % m61, "31", "M127 % M61 remainder");
+
+    expectStr(BigInt(50).fact() / BigInt(48).fact(), "2450", "50! / 48! is 50 * 49");
+    expectStr(BigInt(50).fact() % BigInt(48).fact(), "0", "48! divides 50!");
+    expectStr(b / a, "0", "larger divisor gives zero quotient");
+    expectFull(b % a, "9876543210987", "larger divisor leaves the dividend as remainder");
+    expectStr(a / a, "1", "x / x is 1");
+    expectStr(a % a, "0", "x % x is 0");
+    expectStr(BigInt(0) / b, "0", "0 / x is 0");
+
+    bool threw = false;
+    try {
+        BigInt q = a / BigInt(0);
+        (void)q;
+    } catch (const std::domain_error &) {
+        threw = true;
+    }
+    expectTrue(threw, "division by zero throws std::domain_error");
+
+    threw = false;
+    try {
+        BigInt r = a % BigInt(0);
+        (void)r;
+    } catch (const std::domain_error &) {
+        threw = true;
+    }
+    expectTrue(threw, "modulo by zero throws std::domain_error");
 }
 
 static void testComparison() {
@@ -202,6 +264,7 @@ int main() {
     testSubtraction();
     testMultiplication();
     testDivision();
+    testLongDivision();
     testComparison();
     testIncrement();
     testIndexAndSize();
