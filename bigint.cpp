@@ -13,6 +13,7 @@
 #include <climits>
 #include <iomanip>
 #include <cstdlib>
+#include <stdexcept>
 
 using std::cout;
 using std::endl;
@@ -123,18 +124,6 @@ private:
         return factHelper(n1, nextAcc); // tail call
     }
 
-    int toInt() const {
-        long long res = 0;
-        for (int i = (int)v.size() - 1; i >= 0; --i) {
-            res = res * 10 + v[i];
-            if (res > INT_MAX) {
-                // only used when we know the value fits, per assignment tests
-                break;
-            }
-        }
-        return (int)res;
-    }
-
     // division by small positive int, returns quotient, sets remainder
     BigInt divByInt(int divisor, int &remainder) const {
         BigInt result;
@@ -158,6 +147,35 @@ private:
         }
         result.trim();
         return result;
+    }
+
+    // Schoolbook long division by an arbitrary BigInt divisor. Walks the
+    // dividend from its most significant digit, bringing each digit down into
+    // a running remainder; since that remainder stays below 10 * divisor,
+    // each quotient digit is found with at most nine subtractions.
+    BigInt divMod(const BigInt &divisor, BigInt &remainder) const {
+        if (divisor.isZero()) {
+            throw std::domain_error("BigInt division by zero");
+        }
+
+        BigInt quotient;
+        quotient.v.assign(v.size(), 0);
+        remainder = BigInt();
+
+        for (int i = (int)v.size() - 1; i >= 0; --i) {
+            // remainder = remainder * 10 + v[i]
+            remainder.v.insert(remainder.v.begin(), v[i]);
+            remainder.trim();
+
+            char qd = 0;
+            while (remainder.cmpAbs(divisor) >= 0) {
+                remainder = remainder - divisor;
+                ++qd;
+            }
+            quotient.v[i] = qd;
+        }
+        quotient.trim();
+        return quotient;
     }
 
 public:
@@ -278,16 +296,14 @@ public:
     }
 
     BigInt operator/(BigInt other) const {
-        int d = other.toInt(); // safe for assignment tests
-        int rem = 0;
-        return divByInt(d, rem);
+        BigInt rem;
+        return divMod(other, rem);
     }
 
     BigInt operator%(BigInt other) const {
-        int d = other.toInt();
-        int rem = 0;
-        divByInt(d, rem);
-        return BigInt(rem);
+        BigInt rem;
+        divMod(other, rem);
+        return rem;
     }
 
     // postfix ++
